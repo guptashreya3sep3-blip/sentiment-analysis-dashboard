@@ -68,9 +68,15 @@ st.markdown("""
         display: inline-block;
     }
 
-    .metric-row { display:flex; gap:1rem; margin:1rem 0; }
+    .metric-row {
+    display:flex;
+    flex-wrap:wrap;
+    gap:1rem;
+    margin:1rem 0;
+    }
     .metric-card {
         flex: 1;
+        min-width:150px;
         background: #ffffff;
         border-radius: 14px;
         padding: 1.2rem 1.5rem;
@@ -547,72 +553,223 @@ if df is None or df.empty:
         st.markdown("**Step 3** — View insights\n\nCharts, word clouds, highlights")
 
 elif df2 is not None and not df2.empty:
-    # Compare mode
-    t1   = st.session_state.current_topic
-    t2   = st.session_state.current_topic2
+
+    # =========================
+    # COMPARE MODE
+    # =========================
+
+    t1 = st.session_state.current_topic
+    t2 = st.session_state.current_topic2
+
     src1 = st.session_state.data_source
     src2 = st.session_state.data_source2
 
-    st.markdown(f"## ⚡ Comparing: **{t1}** vs **{t2}**")
-    st.markdown("---")
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg,#1a1a2e,#16213e);
+        padding:1.5rem;
+        border-radius:16px;
+        margin-bottom:1.5rem;
+    ">
+        <h1 style="color:white;margin:0;">
+            ⚔️ Compare Topics
+        </h1>
 
-    col_left, col_mid, col_right = st.columns([5, 1, 5])
+        <p style="color:#cbd5e0;margin-top:0.5rem;">
+            Real-time sentiment comparison between
+            <b>{t1}</b> and <b>{t2}</b>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col_left:
-        st.markdown(f"### 🔵 {t1}")
+    # =====================================================
+    # MAIN RESPONSIVE COLUMNS
+    # =====================================================
+
+    left_col, right_col = st.columns(2)
+
+    # =====================================================
+    # LEFT SIDE
+    # =====================================================
+
+    with left_col:
+
+        st.markdown(f"# 🔵 {t1}")
+
         render_source_badge(src1)
+
         render_metric_cards(df, t1)
-        st.plotly_chart(pie_chart(df), use_container_width=True, config=CHART_CONFIG)
-        st.plotly_chart(time_series_chart(df), use_container_width=True, config=CHART_CONFIG)
+
+        st.markdown("### 📊 Sentiment Distribution")
+
+        st.plotly_chart(
+            pie_chart(df),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        st.markdown("### 📈 Sentiment Trend")
+
+        st.plotly_chart(
+            time_series_chart(df),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        st.markdown("### 📉 Sentiment Histogram")
+
+        st.plotly_chart(
+            compound_score_histogram(df),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        if 'subreddit' in df.columns:
+
+            st.markdown("### 📰 News Sources")
+
+            st.plotly_chart(
+                bar_chart_by_subreddit(df),
+                use_container_width=True,
+                config=CHART_CONFIG
+            )
+
         render_highlighted_posts(df)
 
-    with col_mid:
-        st.markdown("<br><br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown('<div class="vs-badge">VS</div>', unsafe_allow_html=True)
+    # =====================================================
+    # RIGHT SIDE
+    # =====================================================
 
-    with col_right:
-        st.markdown(f"### 🔴 {t2}")
+    with right_col:
+
+        st.markdown(f"# 🔴 {t2}")
+
         render_source_badge(src2)
+
         render_metric_cards(df2, t2)
-        st.plotly_chart(pie_chart(df2), use_container_width=True, config=CHART_CONFIG)
-        st.plotly_chart(time_series_chart(df2), use_container_width=True, config=CHART_CONFIG)
+
+        st.markdown("### 📊 Sentiment Distribution")
+
+        st.plotly_chart(
+            pie_chart(df2),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        st.markdown("### 📈 Sentiment Trend")
+
+        st.plotly_chart(
+            time_series_chart(df2),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        st.markdown("### 📉 Sentiment Histogram")
+
+        st.plotly_chart(
+            compound_score_histogram(df2),
+            use_container_width=True,
+            config=CHART_CONFIG
+        )
+
+        if 'subreddit' in df2.columns:
+
+            st.markdown("### 📰 News Sources")
+
+            st.plotly_chart(
+                bar_chart_by_subreddit(df2),
+                use_container_width=True,
+                config=CHART_CONFIG
+            )
+
         render_highlighted_posts(df2)
 
     st.markdown("---")
-    st.markdown('<div class="section-header">☁️ Word Clouds Comparison</div>',
-                unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f"**{t1}**")
+
+    # =====================================================
+    # WORD CLOUDS
+    # =====================================================
+
+    st.markdown("""
+    <div class="section-header">
+        ☁️ Word Cloud Comparison
+    </div>
+    """, unsafe_allow_html=True)
+
+    wc1, wc2 = st.columns(2)
+
+    with wc1:
+
+        st.markdown(f"### 🔵 {t1}")
+
         img = generate_wordcloud(df, "all")
+
         if img:
+
             st.markdown(
-                f'<img src="data:image/png;base64,{img}" style="width:100%;border-radius:8px"/>',
+                f"""
+                <img src="data:image/png;base64,{img}"
+                style="
+                    width:100%;
+                    border-radius:14px;
+                    border:1px solid #e2e8f0;
+                ">
+                """,
                 unsafe_allow_html=True
             )
-    with col2:
-        st.markdown(f"**{t2}**")
+
+    with wc2:
+
+        st.markdown(f"### 🔴 {t2}")
+
         img2 = generate_wordcloud(df2, "all")
+
         if img2:
+
             st.markdown(
-                f'<img src="data:image/png;base64,{img2}" style="width:100%;border-radius:8px"/>',
+                f"""
+                <img src="data:image/png;base64,{img2}"
+                style="
+                    width:100%;
+                    border-radius:14px;
+                    border:1px solid #e2e8f0;
+                ">
+                """,
                 unsafe_allow_html=True
             )
 
     st.markdown("---")
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        csv1 = df.to_csv(index=False).encode('utf-8')
-        st.download_button(f"📥 Download {t1} CSV", data=csv1,
-                           file_name=f"sentiment_{t1.replace(' ','_')}.csv",
-                           mime="text/csv")
-    with col_d2:
-        csv2 = df2.to_csv(index=False).encode('utf-8')
-        st.download_button(f"📥 Download {t2} CSV", data=csv2,
-                           file_name=f"sentiment_{t2.replace(' ','_')}.csv",
-                           mime="text/csv")
 
-else:
+    # =====================================================
+    # DOWNLOAD BUTTONS
+    # =====================================================
+
+    d1, d2 = st.columns(2)
+
+    with d1:
+
+        csv1 = df.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            f"📥 Download {t1} CSV",
+            data=csv1,
+            file_name=f"{t1}_sentiment.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+    with d2:
+
+        csv2 = df2.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            f"📥 Download {t2} CSV",
+            data=csv2,
+            file_name=f"{t2}_sentiment.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    else:
     # Single topic
     topic_label = st.session_state.current_topic or "loaded data"
     source      = st.session_state.data_source
