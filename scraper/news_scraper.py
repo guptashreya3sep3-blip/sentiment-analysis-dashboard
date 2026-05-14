@@ -1,32 +1,37 @@
 import pandas as pd
 from newsapi import NewsApiClient
 from datetime import datetime, timedelta
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env
 load_dotenv()
 
+# Get API key securely
+API_KEY = os.getenv("NEWS_API_KEY")
 
-def scrape_news(topic: str, limit: int = 100) -> pd.DataFrame:
-    """
-    Scrape real news articles for any topic using NewsAPI.
-    """
-    api_key = os.getenv("NEWS_API_KEY", "")
 
-    if not api_key or api_key == "paste_your_actual_newsapi_key_here":
-        print("No NewsAPI key found, falling back to demo data")
+def scrape_news(topic: str, limit: int = 50) -> pd.DataFrame:
+    """
+    Fetch live news articles using NewsAPI
+    and return them as a pandas DataFrame.
+    """
+    # Check API key
+    if not API_KEY:
+        print("❌ NEWS_API_KEY not found in .env file")
         return pd.DataFrame()
 
     try:
-        newsapi = NewsApiClient(api_key=api_key)
+        # Initialize NewsAPI client
+        newsapi = NewsApiClient(api_key=API_KEY)
 
-        end_date   = datetime.now()
+        # Date range (last 30 days)
+        end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
 
-        print(f"Fetching real news for '{topic}'...")
+        print(f"🔍 Fetching news for: {topic}")
 
+        # Fetch articles
         response = newsapi.get_everything(
             q=topic,
             from_param=start_date.strftime('%Y-%m-%d'),
@@ -36,68 +41,83 @@ def scrape_news(topic: str, limit: int = 100) -> pd.DataFrame:
             page_size=min(limit, 100)
         )
 
-        articles = response.get('articles', [])
+        articles = response.get("articles", [])
 
+        # No articles found
         if not articles:
-            print("No articles found for this topic")
+            print("⚠️ No articles found")
             return pd.DataFrame()
 
         posts = []
-        for i, article in enumerate(articles):
-            # Combine title and description for better sentiment analysis
-            title = article.get('title', '') or ''
-            desc  = article.get('description', '') or ''
-            text  = (title + ' ' + desc).strip()
 
-            if not text or text == ' ':
+        # Process each article
+        for i, article in enumerate(articles):
+
+            title = article.get("title", "") or ""
+            description = article.get("description", "") or ""
+
+            # Combine title + description
+            text = f"{title} {description}".strip()
+
+            if not text:
                 continue
 
-            # Parse published date
-            published = article.get('publishedAt', '')
-            try:
-                date_obj = datetime.strptime(published[:10], '%Y-%m-%d')
-                date_str = date_obj.strftime('%Y-%m-%d')
-            except Exception:
-                date_str = datetime.now().strftime('%Y-%m-%d')
+            # Published date
+            published = article.get("publishedAt", "")
 
-            # Get source name as subreddit equivalent
-            source = article.get('source', {})
-            source_name = source.get('name', 'News') if source else 'News'
+            try:
+                date_obj = datetime.strptime(
+                    published[:10],
+                    "%Y-%m-%d"
+                )
+
+                date_str = date_obj.strftime("%Y-%m-%d")
+
+            except:
+                date_str = datetime.now().strftime("%Y-%m-%d")
+
+            # Source name
+            source = article.get("source", {})
+            source_name = source.get("name", "News")
 
             posts.append({
-                "id":           f"news_{i}_{topic[:5]}",
-                "title":        title,
-                "text":         text,
-                "score":        0,
-                "num_comments": 0,
-                "created_utc":  published,
-                "date":         date_str,
-                "subreddit":    source_name,
-                "url":          article.get('url', ''),
-                "author":       article.get('author', 'unknown') or 'unknown',
-                "topic":        topic
+                "id": f"news_{i}",
+                "title": title,
+                "text": text,
+                "date": date_str,
+                "source": source_name,
+                "url": article.get("url", ""),
+                "author": article.get("author", "Unknown"),
+                "topic": topic
             })
 
+        # Create DataFrame
         df = pd.DataFrame(posts)
 
-        if df.empty:
-            return pd.DataFrame()
-
+        # Create data folder if not exists
         os.makedirs("data", exist_ok=True)
+
+        # Save raw data
         df.to_csv("data/raw_data.csv", index=False)
-        print(f"✅ Fetched {len(df)} real news articles for '{topic}'")
+
+        print(f"✅ Successfully fetched {len(df)} articles")
 
         return df
 
     except Exception as e:
-        print(f"NewsAPI error: {e}")
+        print(f"❌ Error: {e}")
         return pd.DataFrame()
 
 
+# Testing
 if __name__ == "__main__":
+
     topic = input("Enter topic: ")
-    df = scrape_news(topic, limit=100)
+
+    df = scrape_news(topic)
+
     if not df.empty:
-        print(df[['title', 'date', 'subreddit']].head(10))
+        print(df.head())
+
     else:
-        print("No data returned")
+        print("No data fetched.")

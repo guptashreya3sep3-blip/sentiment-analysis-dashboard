@@ -1,0 +1,15 @@
+# Virtual Environment
+venv/
+
+# Environment Variables
+.env
+
+# Python Cache
+__pycache__/
+
+# VS Code Settings
+.vscode/
+
+# CSV Generated Files (optional)
+data/raw_data.csv
+data/scored_data.csv
