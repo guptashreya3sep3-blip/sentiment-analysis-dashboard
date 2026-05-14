@@ -9,6 +9,7 @@ load_dotenv()
 
 # Get API key securely
 API_KEY = os.getenv("NEWS_API_KEY")
+print("API KEY:", API_KEY)
 
 
 def scrape_news(topic: str, limit: int = 50) -> pd.DataFrame:
@@ -33,7 +34,7 @@ def scrape_news(topic: str, limit: int = 50) -> pd.DataFrame:
 
         # Fetch articles
         response = newsapi.get_everything(
-            q=topic,
+            q=f'"{topic}"',
             from_param=start_date.strftime('%Y-%m-%d'),
             to=end_date.strftime('%Y-%m-%d'),
             language='en',

@@ -302,9 +302,21 @@ def render_highlighted_posts(df):
     if 'sentiment_compound' not in df.columns or df.empty:
         return
 
-    best  = df.loc[df['sentiment_compound'].idxmax()]
-    worst = df.loc[df['sentiment_compound'].idxmin()]
-
+     # Filter articles related to searched topic only
+    topic = str(st.session_state.current_topic).lower()
+    filtered_df = df[
+        df['title'].fillna('').str.lower().str.contains(topic)
+    ]
+    # fallback if nothing matches
+    if filtered_df.empty:
+        filtered_df = df
+    # Get most positive and negative article
+    best = filtered_df.loc[
+        filtered_df['sentiment_compound'].idxmax()
+    ]
+    worst = filtered_df.loc[
+        filtered_df['sentiment_compound'].idxmin()
+    ]
     st.markdown(
         '<div class="section-header">🌟 Most Positive vs Most Negative Article</div>',
         unsafe_allow_html=True
@@ -564,23 +576,15 @@ elif df2 is not None and not df2.empty:
     src1 = st.session_state.data_source
     src2 = st.session_state.data_source2
 
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg,#1a1a2e,#16213e);
-        padding:1.5rem;
-        border-radius:16px;
-        margin-bottom:1.5rem;
-    ">
-        <h1 style="color:white;margin:0;">
-            ⚔️ Compare Topics
-        </h1>
-
+    st.markdown(
+        f"""
         <p style="color:#cbd5e0;margin-top:0.5rem;">
             Real-time sentiment comparison between
             <b>{t1}</b> and <b>{t2}</b>
         </p>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
     # =====================================================
     # MAIN RESPONSIVE COLUMNS
@@ -765,11 +769,11 @@ elif df2 is not None and not df2.empty:
         st.download_button(
             f"📥 Download {t2} CSV",
             data=csv2,
-            file_name=f"{t2}_sentiment.csv",
+            file_name=f"{t2}_sentiment.csv",    
             mime="text/csv",
             use_container_width=True
         )
-    else:
+else:
     # Single topic
     topic_label = st.session_state.current_topic or "loaded data"
     source      = st.session_state.data_source
